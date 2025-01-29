@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS16 Trade Simulator</title>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/ekmas/cs16.css@main/css/cs16.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid #000;
+        }
+
+        .top-bar {
+            border-bottom: 2px solid #000;
+            padding: 8px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .top-bar h1 {
+            font-size: 16px;
+            font-weight: normal;
+        }
+
+        .progress-container {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .coin-counter {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+
+        .coin-symbol {
+            width: 20px;
+            height: 20px;
+            background-color: gold;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .main-section {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .left-sidebar {
+            width: 250px;
+            border-right: 2px solid #000;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .assets-list {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .asset-row {
+            border-bottom: 1px solid #ccc;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .asset-row:hover {
+            background-color: #f5f5f5;
+        }
+
+        .asset-row td {
+            padding: 10px;
+            vertical-align: middle;
+        }
+
+        .asset-image-preview {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+
+        .asset-name {
+            font-weight: bold;
+            width: 200px;
+        }
+
+        .asset-type {
+            color: #666;
+            width: 100px;
+        }
+
+        .asset-price {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .right-sidebar {
+            width: 200px;
+            border-left: 2px solid #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .right-sidebar-image {
+            width: 160px;
+            height: 370px;
+            object-fit: cover;
+        }
+
+        .bottom-bar {
+            border-top: 2px solid #000;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+        }
+
+        .credits {
+            display: flex;
+            gap: 15px;
+        }
+
+        .username-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .username-text {
+            font-size: 14px;
+        }
+
+        .login-status {
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        .scroll-controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .radio-scroll {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        /* Dialog content styles */
+        .dialog-content {
+            margin: 15px 0;
+        }
+
+        .asset-dialog-image {
+            max-width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            margin-bottom: 15px;
+        }
+
+        .asset-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .clicker-image {
+            max-width: 100%;
+            height: auto;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-bar">
+            <h1>CS16 trade</h1>
+            <button class="cs-btn" onclick="showDialog('about')">About</button>
+            <button class="cs-btn" onclick="showDialog('howto')">How to play?</button>
+            <div class="progress-container">
+                <div class="cs-progress-bar">
+                    <div id="progressBar" class="bars" style="width: 0%"></div>
+                </div>
+                <div class="cs-tooltip coin-counter">
+                    <div class="coin-symbol">$</div>
+                    <span id="coinCount">0</span>
+                    <span class="text" style="bottom: 125%">Your current balance</span>
+                </div>
+            </div>
+        </div>
+        <div class="main-section">
+            <div class="left-sidebar">
+                <div class="sidebar-section">
+                    <div class="checkbox-group">
+                        <div class="section-title">Select Type:</div>
+                        <div class="cs-checkbox">
+                            <input type="checkbox" id="skins" name="type" value="skins" checked />
+                            <label class="cs-checkbox__label" for="skins">Skins</label>
+                        </div>
+                        <div class="cs-checkbox">
+                            <input type="checkbox" id="knives" name="type" value="knives" checked />
+                            <label class="cs-checkbox__label" for="knives">Knives</label>
+                        </div>
+                        <div class="cs-checkbox">
+                            <input type="checkbox" id="guns" name="type" value="guns" checked />
+                            <label class="cs-checkbox__label" for="guns">Guns</label>
+                        </div>
+                        <div class="cs-checkbox">
+                            <input type="checkbox" id="sprays" name="type" value="sprays" checked />
+                            <label class="cs-checkbox__label" for="sprays">Sprays</label>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="section-title">View:</div>
+                        <select class="cs-select" id="statusSelect">
+                            <option value="shop">Shop</option>
+                            <option value="owned">Inventory</option>
+                            <option value="listing">My Listings</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="content">
+                <table class="assets-list" id="assetsTable">
+                    <tbody>
+                        <!-- Assets will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="right-sidebar">
+                <img src="https://cdn.glitch.global/cad4a3c1-e45e-4f45-9009-22a91dbdf12f/cs16%20profile.png?v=1737974679440" alt="Sidebar Image" class="right-sidebar-image">
+                <button class="cs-btn" onclick="showDialog('game')">Join Game</button>
+            </div>
+        </div>
+        <div class="bottom-bar">
+            <div class="credits">
+                <a href="https://x.com/opaeoh" target="_blank">Made by @Opaeoh</a>
+                <a href="https://www.reddit.com/r/webdev/comments/1i8y6gq/i_made_a_css_library_based_on_counter_strike_16_ui/?rdt=51079" target="_blank">Made with cs16.css</a>
+            </div>
+            <div class="scroll-controls">
+                <fieldset class="cs-fieldset">
+                    <div class="radio-wrapper">
+                        <input type="radio" name="scroll" id="top" onclick="scrollToPosition('top')" />
+                        <label for="top">Top</label>
+                    </div>
+                    <div class="radio-wrapper">
+                        <input type="radio" name="scroll" id="bottom" onclick="scrollToPosition('bottom')" />
+                        <label for="bottom">Bottom</label>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="username-container">
+                <span class="login-status" id="loginStatus">Logging in as:</span>
+                <input type="text" placeholder="Enter username" class="cs-input" id="usernameInput">
+                <span class="username-text" id="usernameText" style="display: none;"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Dialogs -->
+    <dialog id="aboutDialog" class="cs-dialog">
+        <form method="dialog">
+            <div class="heading">
+                <div class="wrapper">
+                    <div class="icon"></div>
+                    <p class="text">About CS16 Trade</p>
+                </div>
+                <button class="cs-btn close" onclick="hideDialog('about')"></button>
+            </div>
+            <div class="content">
+                Welcome to CS16 Trade! This is a platform where you can trade your CS16 items with other players.
+                We provide a safe and easy way to exchange skins, knives, guns, and sprays.
+            </div>
+            <menu class="footer-btns">
+                <button class="cs-btn">OK</button>
+            </menu>
+        </form>
+    </dialog>
+
+    <dialog id="howtoDialog" class="cs-dialog">
+        <form method="dialog">
+            <div class="heading">
+                <div class="wrapper">
+                    <div class="icon"></div>
+                    <p class="text">How to Play?</p>
+                </div>
+                <button class="cs-btn close" onclick="hideDialog('howto')"></button>
+            </div>
+            <div class="content">
+                1. Buy items from the shop<br>
+                2. List items for sale in your inventory<br>
+                3. Wait for buyers or cancel listings<br>
+                4. Earn profit by selling items for more than you paid<br>
+                5. Play the clicker game to earn more coins!
+            </div>
+            <menu class="footer-btns">
+                <button class="cs-btn">OK</button>
+            </menu>
+        </form>
+    </dialog>
+
+    <dialog id="gameDialog" class="cs-dialog">
+        <form method="dialog">
+            <div class="heading">
+                <div class="wrapper">
+                    <div class="icon"></div>
+                    <p class="text">Clicker Game</p>
+                </div>
+                <button class="cs-btn close" onclick="hideDialog('game')"></button>
+            </div>
+            <div class="content">
+                <div class="cs-tooltip">
+                    <img src="https://images.gamebanana.com/img/ss/mods/800-90_67920cd039f8e.jpg" 
+                         alt="Clicker Image" 
+                         class="clicker-image"
+                         id="clickerImage">
+                    <span class="text" style="bottom: 125%">Click to earn coins!</span>
+                </div>
+            </div>
+            <menu class="footer-btns">
+                <button class="cs-btn">Close</button>
+            </menu>
+        </form>
+    </dialog>
+
+    <dialog id="assetDialog" class="cs-dialog">
+        <form method="dialog">
+            <div class="heading">
+                <div class="wrapper">
+                    <div class="icon"></div>
+                    <p class="text" id="assetDialogTitle">Asset Preview</p>
+                </div>
+                <button class="cs-btn close" onclick="hideDialog('asset')"></button>
+            </div>
+            <div class="content">
+                <img id="assetDialogImage" class="asset-dialog-image" src="" alt="Asset Preview">
+                <div id="assetDialogInfo"></div>
+                <div id="assetDialogActions" class="asset-actions">
+                    <!-- Actions will be populated dynamically -->
+                </div>
+            </div>
+        </form>
+    </dialog>
+
+    <script>
+        // Global variables
+        let coins = 0;
+        const ownedAssets = [];
+        const listedAssets = [];
+
+        // New variable for image switch duration
+        const IMAGE_SWITCH_DURATION = 100; // 0.1 seconds in milliseconds
+
+        // Asset data
+        const assets = [
+            {
+                id: 1,
+                image: "https://wiki.cs.money/images/weapons/karambit-doppler.png",
+                name: "Doppler Karambit",
+                type: "knives",
+                price: 750
+            },
+            {
+                id: 2,
+                image: "https://wiki.cs.money/images/weapons/awp-dragon-lore.png",
+                name: "Dragon Lore AWP",
+                type: "guns",
+                price: 680
+            },
+            {
+                id: 3,
+                image: "https://wiki.cs.money/images/weapons/butterfly-fade.png",
+                name: "Fade Butterfly",
+                type: "skins",
+                price: 550
+            },
+            {
+                id: 4,
+                image: "https://steamcdn-a.akamaihd.net/apps/730/icons/econ/stickers/cologne2014/crown.png",
+                name: "Crown Foil",
+                type: "sprays",
+                price: 520
+            },
+            {
+                id: 5,
+                image: "https://wiki.cs.money/images/weapons/m9-bayonet-crimson.png",
+                name: "Crimson M9 Bayonet",
+                type: "knives",
+                price: 450
+            },
+            {
+                id: 6,
+                image: "https://wiki.cs.money/images/weapons/ak47-fire-serpent.png",
+                name: "Fire Serpent AK-47",
+                type: "guns",
+                price: 440
+            },
+            {
+                id: 7,
+                image: "https://wiki.cs.money/images/weapons/desert-eagle-blaze.png",
+                name: "Blaze Desert Eagle",
+                type: "guns",
+                price: 380
+            },
+            {
+                id: 8,
+                image: "https://wiki.cs.money/images/weapons/glock-18-fade.png",
+                name: "Fade Glock-18",
+                type: "guns",
+                price: 320
+            },
+            {
+                id: 9,
+                image: "https://wiki.cs.money/images/weapons/m4a4-howl.png",
+                name: "Howl M4A4",
+                type: "guns",
+                price: 890
+            },
+            {
+                id: 10,
+                image: "https://wiki.cs.money/images/weapons/butterfly-crimson.png",
+                name: "Crimson Web Butterfly",
+                type: "knives",
+                price: 670
+            },
+            {
+                id: 11,
+                image: "https://wiki.cs.money/images/weapons/usp-s-kill-confirmed.png",
+                name: "Kill Confirmed USP-S",
+                type: "guns",
+                price: 290
+            },
+            {
+                id: 12,
+                image: "https://steamcdn-a.akamaihd.net/apps/730/icons/econ/stickers/boston2018/sig_electronic.png",
+                name: "Electronic Signature",
+                type: "sprays",
+                price: 180
+            }
+        ];
+
+        // Function to create asset row
+        function createAssetRow(asset, view) {
+            const row = document.createElement('tr');
+            row.className = 'asset-row';
+            row.innerHTML = `
+                <td><img src="${asset.image}" alt="${asset.name}" class="asset-image-preview"></td>
+                <td class="asset-name">${asset.name}</td>
+                <td class="asset-type">${asset.type}</td>
+                <td>
+                    <div class="asset-price">
+                        <div class="coin-symbol">$</div>
+                        <span>${view === 'listing' ? asset.listingPrice : asset.price}</span>
+                    </div>
+                </td>
+            `;
+            row.onclick = () => showAssetDialog(asset, view);
+            return row;
+        }
+
+        // Clicker game functionality with image switch
+        const clickerImage = document.getElementById('clickerImage');
+        let clickMultiplier = 1;
+        let isAnimating = false;
+        const defaultImage = "https://images.gamebanana.com/img/ss/mods/800-90_67920cd039f8e.jpg";
+        const clickImage = "https://image-cdn.hypb.st/https%3A%2F%2Fhypebeast.com%2Fimage%2F2016%2F12%2Fcounter-strike-mod-awp-0.jpg?w=960&cbr=1&q=90&fit=max";
+
+        clickerImage.addEventListener('click', function() {
+            if (!isAnimating) {
+                isAnimating = true;
+                coins += clickMultiplier;
+                updateCoins();
+                
+                // Switch to click image
+                this.src = clickImage;
+                
+                // Return to default image after IMAGE_SWITCH_DURATION
+                setTimeout(() => {
+                    this.src = defaultImage;
+                    isAnimating = false;
+                }, IMAGE_SWITCH_DURATION);
+                
+                // Scale animation
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 100);
+            }
+        });
+
+        // Function to show asset dialog
+        function showAssetDialog(asset, view) {
+            const dialog = document.getElementById('assetDialog');
+            const dialogImage = document.getElementById('assetDialogImage');
+            const dialogTitle = document.getElementById('assetDialogTitle');
+            const dialogInfo = document.getElementById('assetDialogInfo');
+            const dialogActions = document.getElementById('assetDialogActions');
+
+            dialogImage.src = asset.image;
+            dialogTitle.textContent = asset.name;
+            dialogInfo.innerHTML = `
+                <p><strong>Type:</strong> ${asset.type}</p>
+                <p><strong>Price:</strong> ${view === 'listing' ? asset.listingPrice : asset.price} coins</p>
+            `;
+
+            dialogActions.innerHTML = '';
+
+            if (view === 'shop') {
+                const buyButton = document.createElement('button');
+                buyButton.className = 'cs-btn';
+                buyButton.textContent = 'Buy';
+                buyButton.onclick = () => buyAsset(asset);
+                dialogActions.appendChild(buyButton);
+            } else if (view === 'owned') {
+                const sellButton = document.createElement('button');
+                sellButton.className = 'cs-btn';
+                sellButton.textContent = 'List for Sale';
+                sellButton.onclick = () => listAsset(asset);
+                dialogActions.appendChild(sellButton);
+            } else if (view === 'listing') {
+                const cancelButton = document.createElement('button');
+                cancelButton.className = 'cs-btn';
+                cancelButton.textContent = 'Cancel Listing';
+                cancelButton.onclick = () => cancelListing(asset);
+                dialogActions.appendChild(cancelButton);
+            }
+
+            dialog.showModal();
+        }
+
+        // Function to buy asset
+        function buyAsset(asset) {
+            if (coins >= asset.price) {
+                coins -= asset.price;
+                ownedAssets.push({ ...asset });
+                updateCoins();
+                showNotification(`Successfully purchased ${asset.name} for ${asset.price} coins!`);
+                hideDialog('asset');
+                updateAssetsDisplay();
+            } else {
+                showNotification('Not enough coins!', 'error');
+            }
+        }
+
+        // Function to list asset for sale
+        function listAsset(asset) {
+            const dialog = document.getElementById('assetDialog');
+            const dialogContent = dialog.querySelector('.content');
+            
+            const priceInput = document.createElement('input');
+            priceInput.type = 'number';
+            priceInput.className = 'cs-input';
+            priceInput.placeholder = 'Enter listing price';
+            priceInput.value = asset.price;
+            
+            const confirmButton = document.createElement('button');
+            confirmButton.className = 'cs-btn';
+            confirmButton.textContent = 'Confirm Listing';
+            
+            confirmButton.onclick = () => {
+                const listingPrice = Number(priceInput.value);
+                if (listingPrice > 0) {
+                    const index = ownedAssets.findIndex(a => a.id === asset.id);
+                    if (index !== -1) {
+                        const listedAsset = { ...ownedAssets[index], listingPrice };
+                        ownedAssets.splice(index, 1);
+                        listedAssets.push(listedAsset);
+                        startSaleTimer(listedAsset);
+                        hideDialog('asset');
+                        updateAssetsDisplay();
+                        showNotification(`${asset.name} listed for ${listingPrice} coins!`);
+                    }
+                }
+            };
+            
+            dialogContent.appendChild(priceInput);
+            dialogContent.appendChild(confirmButton);
+        }
+
+        // Function to start sale timer
+        function startSaleTimer(asset) {
+            const minTime = 5000;
+            const maxTime = 30000;
+            const randomTime = Math.random() * (maxTime - minTime) + minTime;
+            
+            setTimeout(() => {
+                if (asset.listingPrice <= asset.price * 1.5) {
+                    const index = listedAssets.findIndex(a => a.id === asset.id);
+                    if (index !== -1) {
+                        coins += asset.listingPrice;
+                        listedAssets.splice(index, 1);
+                        updateCoins();
+                        updateAssetsDisplay();
+                        showNotification(`Your ${asset.name} sold for ${asset.listingPrice} coins!`);
+                    }
+                }
+            }, randomTime);
+        }
+
+        // Function to cancel listing
+        function cancelListing(asset) {
+            const index = listedAssets.findIndex(a => a.id === asset.id);
+            if (index !== -1) {
+                const canceledAsset = { ...listedAssets[index] };
+                delete canceledAsset.listingPrice;
+                listedAssets.splice(index, 1);
+                ownedAssets.push(canceledAsset);
+                hideDialog('asset');
+                updateAssetsDisplay();
+                showNotification(`Listing cancelled for ${asset.name}`);
+            }
+        }
+
+        // Function to filter assets
+        function filterAssets() {
+            const selectedTypes = Array.from(document.querySelectorAll('input[name="type"]:checked'))
+                .map(checkbox => checkbox.value);
+            
+            const status = document.getElementById('statusSelect').value;
+            let currentAssets;
+            
+            switch(status) {
+                case 'shop':
+                    currentAssets = assets;
+                    break;
+                case 'owned':
+                    currentAssets = ownedAssets;
+                    break;
+                case 'listing':
+                    currentAssets = listedAssets;
+                    break;
+                default:
+                    currentAssets = [];
+            }
+            
+            return currentAssets.filter(asset => selectedTypes.includes(asset.type));
+        }
+
+        // Function to update assets display
+        function updateAssetsDisplay() {
+            const status = document.getElementById('statusSelect').value;
+            const filteredAssets = filterAssets();
+            const assetsTable = document.getElementById('assetsTable').getElementsByTagName('tbody')[0];
+            assetsTable.innerHTML = '';
+            
+            filteredAssets.forEach(asset => {
+                assetsTable.appendChild(createAssetRow(asset, status));
+            });
+        }
+
+        // Function to update coins display
+        function updateCoins() {
+            document.getElementById('coinCount').textContent = coins;
+            const progress = (coins % 100) / 100 * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        // Function to show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.backgroundColor = type === 'success' ? '#4CAF50' : '#f44336';
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Function to scroll to position
+        function scrollToPosition(position) {
+            const content = document.querySelector('.content');
+            if (position === 'top') {
+                content.scrollTop = 0;
+            } else if (position === 'bottom') {
+                content.scrollTop = content.scrollHeight;
+            }
+        }
+
+        // Dialog functionality
+        function showDialog(type) {
+            const dialog = document.getElementById(type + 'Dialog');
+            dialog.showModal();
+        }
+
+        function hideDialog(type) {
+            const dialog = document.getElementById(type + 'Dialog');
+            dialog.close();
+        }
+
+        // Username functionality
+        const usernameInput = document.getElementById('usernameInput');
+        const usernameText = document.getElementById('usernameText');
+        const loginStatus = document.getElementById('loginStatus');
+
+        usernameInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                usernameText.textContent = this.value;
+                usernameText.style.display = 'block';
+                this.style.display = 'none';
+                loginStatus.textContent = 'Logged in as:';
+            }
+        });
+
+        // Event listeners for filters
+        document.querySelectorAll('input[name="type"]').forEach(checkbox => {
+            checkbox.addEventListener('change', updateAssetsDisplay);
+        });
+
+        document.getElementById('statusSelect').addEventListener('change', updateAssetsDisplay);
+
+        // Initialize display
+        updateAssetsDisplay();
+    </script>
+</body>
+</html>
